@@ -1,16 +1,17 @@
+
 const express = require('express');
 const sharp = require('sharp');
 const app = express();
 
 app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
   let format = (req.params[0] == "png" ? "png" : "jpeg");
-  let width = 300;
-  let height = 200;
-  let border = 5;
-  let bgcolor = "#fcfcfc";
-  let fgcolor = "#ddd";
-  let textcolor = "#aaa";
-  let textsize  = 24;
+  let width = +req.query.width || 300;
+  let height = +req.query.height || 200;
+  let border = +req.query.border || 5;
+  let bgcolor = +req.query.bgcolor || "#fcfcfc";
+  let fgcolor = +req.query.fgcolor || "#ddd";
+  let textcolor = +req.query.textcolor || "#aaa";
+  let textsize  = +req.query.textsize || 24;
 
   let image = sharp({
     create: {
