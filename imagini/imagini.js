@@ -1,7 +1,41 @@
-
+const bodyparser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const sharp = require('sharp');
 const app = express();
+
+//function that wil handle uploadin an image
+app.post("/uploads/:image", bodyparser.raw({
+    limit: "10mb",
+    type: "image/*"
+}), (req, res) => {
+    let image = req.params.image.toLowerCase();
+
+    //check if correct path and image size
+    if (!image.match(/\.(png|jpg)$/)) {
+        return res.status(403).end();
+    }
+
+    /*
+    create stream to the local file to save image and its size.
+    enalbles microservice user to check if received all data
+    */
+    let len = req.body.length;
+    let fd = fs.createWriteStream(path.join(_dirname, "uploads", image), {
+        flags: "w+",
+        encoding: "binary"
+    });
+
+    // write the image to the file
+    fd.write(req.body);
+    fd.end();
+
+    fd.on ("close", () => {
+        //after closing the stream, info about image saved is send to user
+        res.send({ status: "ok", size: len });
+    });
+})
 
 app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
   let format = (req.params[0] == "png" ? "png" : "jpeg");
@@ -53,6 +87,7 @@ app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
   
   image.overlayWith(thumbnail)[format]().pipe(res);
 });
+
 
 app.listen(3000, () => {
   console.log("ready");
