@@ -5,6 +5,17 @@ const express = require('express');
 const sharp = require('sharp');
 const app = express();
 
+app.head("/uploads/:image", (req, res) => {
+    fs.access(
+        path.join(_dirname, "uploads", req.params.image),
+        fs.constants.R_OK,
+        (err) => {
+            res.status(err ? 404 : 200);
+            res.end();
+        }
+    )
+})
+
 //function that wil handle uploadin an image
 app.post("/uploads/:image", bodyparser.raw({
     limit: "10mb",
