@@ -7,7 +7,7 @@ const app = express();
 
 app.head("/uploads/:image", (req, res) => {
     fs.access(
-        path.join(_dirname, "uploads", req.params.image),
+        path.join(__dirname, "uploads", req.params.image),
         fs.constants.R_OK,
         (err) => {
             res.status(err ? 404 : 200);
@@ -22,6 +22,7 @@ app.post("/uploads/:image", bodyparser.raw({
     type: "image/*"
 }), (req, res) => {
     let image = req.params.image.toLowerCase();
+    console.log(image);
 
     //check if correct path and image size
     if (!image.match(/\.(png|jpg)$/)) {
@@ -33,7 +34,7 @@ app.post("/uploads/:image", bodyparser.raw({
     enalbles microservice user to check if received all data
     */
     let len = req.body.length;
-    let fd = fs.createWriteStream(path.join(_dirname, "uploads", image), {
+    let fd = fs.createWriteStream(path.join(__dirname, "uploads", image), {
         flags: "w+",
         encoding: "binary"
     });
