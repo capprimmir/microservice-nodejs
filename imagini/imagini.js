@@ -5,39 +5,33 @@ const express = require('express');
 const sharp = require('sharp');
 const app = express();
 
-app.get("/uploads/:image", (req,res) => {
-    let ext = path.extname(req.params.image);
-
-    if (!ext.match(/^\.(png|jpg)$/)) {
-        return resizeBy.status(404).end();
+app.params("image", (req, res, next, image) => {
+    if (!image.match(/\.(png|jpg)$/i)) {
+        return res.status(req.method == "POST" ? 403 : 404).end();
     }
+    req.image = image;
+    req.localpath = path.join(__dirname, "uploads", req.image);
 
-    let fd = fs.createReadStream(path.join(__dirname, "uploads", req.params.image));
+    return next();
+})
+
+app.get("/uploads/:image", (req,res) => {
+    let fd = fs.createReadStream(req.localpath);
 
     fd.on("error", (e) => {
-        if (e.code == "ENOENT") {
-            res.status(404);
-            if (req.accepts('html')) {
-                res.setHeader("Content-Type", "text/html");
-                res.write("<strong>Error:</strong> image not found");
-            }
-            return res.end();
-        }
-        res.status(500).end();
+        res.status(e.code ==="ENOENT" ? 404 : 500).end();
     });
-
-    res.setHeader("Content-Type", "image/" + ext.substr(1));
+    res.setHeader("Content-Type", "image/" + path.extname(req.image).substr(1));
 
     fd.pipe(res);
 })
 
 app.head("/uploads/:image", (req, res) => {
     fs.access(
-        path.join(__dirname, "uploads", req.params.image),
+        req.localpath,
         fs.constants.R_OK,
         (err) => {
-            res.status(err ? 404 : 200);
-            res.end();
+            res.status(err ? 404 : 200).end();
         }
     )
 })
@@ -47,33 +41,19 @@ app.post("/uploads/:image", bodyparser.raw({
     limit: "10mb",
     type: "image/*"
 }), (req, res) => {
-    let image = req.params.image.toLowerCase();
-    console.log(image);
-
-    //check if correct path and image size
-    if (!image.match(/\.(png|jpg)$/)) {
-        return res.status(403).end();
-    }
-
-    /*
-    create stream to the local file to save image and its size.
-    enalbles microservice user to check if received all data
-    */
-    let len = req.body.length;
-    let fd = fs.createWriteStream(path.join(__dirname, "uploads", image), {
+    let fd = fs.createWriteStream(req.localpath, {
         flags: "w+",
         encoding: "binary"
     });
-
-    // write the image to the file
-    fd.write(req.body);
-    fd.end();
+    
+    fd.end(req.body);
 
     fd.on ("close", () => {
         //after closing the stream, info about image saved is send to user
         res.send({ status: "ok", size: len });
     });
 })
+
 
 app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
   let format = (req.params[0] == "png" ? "png" : "jpeg");
