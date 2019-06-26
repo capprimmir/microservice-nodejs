@@ -5,7 +5,9 @@ const express = require('express');
 const sharp = require('sharp');
 const app = express();
 
-app.params("image", (req, res, next, image) => {
+
+//use route parameter to validate image name
+app.param("image", (req, res, next, image) => {
     if (!image.match(/\.(png|jpg)$/i)) {
         return res.status(req.method == "POST" ? 403 : 404).end();
     }
@@ -13,27 +15,26 @@ app.params("image", (req, res, next, image) => {
     req.localpath = path.join(__dirname, "uploads", req.image);
 
     return next();
-})
+});
 
-app.get("/uploads/:image", (req,res) => {
-    let fd = fs.createReadStream(req.localpath);
+app.param("width", (req, res, next, width) => {
+    req.width = +width;
 
-    fd.on("error", (e) => {
-        res.status(e.code ==="ENOENT" ? 404 : 500).end();
-    });
-    res.setHeader("Content-Type", "image/" + path.extname(req.image).substr(1));
+    return next();
+});
 
-    fd.pipe(res);
-})
+app.param("height", (req, res, next, height) => {
+    req.height = +height;
 
-app.head("/uploads/:image", (req, res) => {
-    fs.access(
-        req.localpath,
-        fs.constants.R_OK,
-        (err) => {
-            res.status(err ? 404 : 200).end();
-        }
-    )
+    return next();
+});
+
+app.param("greyscale", (req, res, next, greyscale) => {
+    if (greyscale != "bw") return next("route");
+
+    req.greyscale = true;
+
+    return next();
 })
 
 //function that wil handle uploadin an image
@@ -53,6 +54,54 @@ app.post("/uploads/:image", bodyparser.raw({
         res.send({ status: "ok", size: len });
     });
 })
+
+app.head("/uploads/:image", (req, res) => {
+    fs.access(
+        req.localpath,
+        fs.constants.R_OK,
+        (err) => {
+            res.status(err ? 404 : 200).end();
+        }
+    )
+});
+
+app.get("/uploads/:width(\\d+)x:height(\\d+)-:greyscale-:image", download_image);
+app.get("/uploads/:width(\\d+)x:height(\\d+)-:image", download_image);
+app.get("/uploads/_x:heigh(\\d+)-:greyscale-:image",download_image);
+app.get("/uploads/_x:heigh(\\d+)-:image",download_image);
+app.get("/uploads/:width(\\d+)x_-greyscale-:image",download_image);
+app.get("/uploads/:width(\\d+)x_-:image",download_image);
+app.get("/uploads/:greyscale-:image", download_image);
+app.get("/uploads/:image", download_image);
+
+function download_image(req, res) {
+    //check if an image exists
+    fs.access(req.localpath, fs.constants.R_OK, (err) => {
+        if (err) return res.status(404).end();
+
+        //initilaize image processing
+        let image = sharp(req.localpath);
+
+        //if receive width and height, tell sharp to ignore aspect ratio and resize
+        if (req.width && req.height) {
+        image.ignoreAspectRatio();
+    }
+
+    // if width or height, resized is done with one parameter
+        if (req.width || req.height) {
+            image.resize(req.width, req.height);
+        }
+
+        if (req.greyscale) {
+            image.greyscale();
+        }
+
+        res.setHeader("Content-Type", "image/" + path.extname(req.image).substr(1));
+
+        image.pipe(res);
+
+    });
+}
 
 
 app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
@@ -109,6 +158,6 @@ app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
 
 app.listen(3000, () => {
   console.log("ready");
-})
+});
 
 
