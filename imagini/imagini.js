@@ -22,7 +22,7 @@ app.post("/uploads/:image", bodyparser.raw({
     enalbles microservice user to check if received all data
     */
     let len = req.body.length;
-    let fd = fs.createWriteStream(path.join(_dirname, "uploads", image), {
+    let fd = fs.createWriteStream(path.join(__dirname, "uploads", image), {
         flags: "w+",
         encoding: "binary"
     });
