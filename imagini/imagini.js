@@ -45,6 +45,26 @@ app.head("/uploads/:image", (req, res) => {
         })
 });
 
+app.get("/uploads/:image", (req, res) => {
+    let ext = path.extname(req.params.image);
+
+    if(!ext.match(/^\.(png|jpg)$/)) {
+        return res.status(404).end();
+    }
+    let fd = fs.createReadStream(path.join(__dirname, "uploads", req.params.image));
+
+    fd.on("error", (e) => {
+        if(e.code =="ENOENT") {
+            return res.status(404).end();
+        }
+        res.status(500).end();
+    });
+
+    res.setHeader("Content-Type", "image/" + ext.substr(1));
+
+    fd.pipe(res);
+})
+
 app.get(/\/thumbnail\.(jpg|png)/, (req, res, next) => {
   let format = (req.params[0] == "png" ? "png" : "jpeg");
   let width = +req.query.width || 300;
