@@ -27,7 +27,9 @@ app.param("image", (req, res, next, image) => {
 });
 
 //function that wil handle uploadin an image
-app.post("/uploads/:name", bodyparser.raw({
+app.post(
+    "/uploads/:name",
+    bodyparser.raw({
         limit: "10mb",
         type: "image/*"
     }),
@@ -75,39 +77,45 @@ app.get("/", (req, res) => {
 app.get("/users", db.getUsers);
 
 app.get("/uploads/:image", (req, res) => {
-    fs.access(req.localpath, fs.constants.R_OK, err => {
-        if (err) return res.status(404).end();
+    // fs.access(req.localpath, fs.constants.R_OK, err => {
+    //     if (err) return res.status(404).end();
 
-        //initilaize image processing
-        let image = sharp(req.localpath);
-        let width = +req.query.width;
-        let height = +req.query.height;
-        let blur = +req.query.blur;
-        let sharpen = +req.query.sharpen;
-        let greyscale = ["yes", "y", "true", "si"].includes(req.query.greyscale);
-        let flop = ["yes", "y", "true", "si"].includes(req.query.flop);
-        let flip = ["yes", "y", "true", "si"].includes(req.query.flip);
+    //initilaize image processing
+    // let image = sharp(req.localpath);
+    let image = sharp(req.image.data);
+    let width = +req.query.width;
+    let height = +req.query.height;
+    let blur = +req.query.blur;
+    let sharpen = +req.query.sharpen;
+    let greyscale = ["yes", "y", "true", "si"].includes(req.query.greyscale);
+    let flop = ["yes", "y", "true", "si"].includes(req.query.flop);
+    let flip = ["yes", "y", "true", "si"].includes(req.query.flip);
 
-        //if receive width and height, tell sharp to ignore aspect ratio and resize
-        if (width > 0 && height > 0) {
-            image.ignoreAspectRatio();
-        }
+    //if receive width and height, tell sharp to ignore aspect ratio and resize
+    if (width > 0 && height > 0) {
+        image.ignoreAspectRatio();
+    }
 
-        // if width or height, resized is done with one parameter
-        if (width > 0 || height > 0) {
-            image.resize(width || null, height || null);
-        }
+    // if width or height, resized is done with one parameter
+    if (width > 0 || height > 0) {
+        image.resize(width || null, height || null);
+    }
 
-        if (flip) image.flip();
-        if (flop) image.flop();
-        if (blur > 0) image.blur(blur);
-        if (sharpen > 0) image.sharpen(sharpen);
-        if (greyscale) image.greyscale();
+    if (flip) image.flip();
+    if (flop) image.flop();
+    if (blur > 0) image.blur(blur);
+    if (sharpen > 0) image.sharpen(sharpen);
+    if (greyscale) image.greyscale();
 
-        res.setHeader("Content-Type", "image/" + path.extname(req.image).substr(1));
+    pool.query("UPDATE images SET date_used = $1, WHERE id = $2", [UTC_TIMESTAMP, req.image.id]);
 
-        image.pipe(res);
-    });
+    res.setHeader(
+        "Content-Type",
+        "image/" + path.extname(req.image.name).substr(1)
+    );
+
+    image.pipe(res);
+    //});
 });
 
 app.listen(3000, () => {
