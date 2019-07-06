@@ -16,23 +16,6 @@ app.param("image", (req, res, next, image) => {
   return next();
 });
 
-app.param("width", (req, res, next, width) => {
-  req.width = +width;
-  return next();
-});
-
-app.param("height", (req, res, next, height) => {
-  req.height = +height;
-  return next();
-});
-
-app.param("greyscale", (req, res, next, greyscale) => {
-  if (greyscale != "bw") return next("route");
-
-  req.greyscale = true;
-  return next();
-});
-
 app.post("/uploads/:image", bodyparser.raw({
   limit: "10mb",
   type: "image/*"
@@ -58,13 +41,6 @@ app.head("/uploads/:image", (req, res) => {
   });
 });
 
-app.get("/uploads/:width(\\d+)x:height(\\d+)-:greyscale-:image", download_image);
-app.get("/uploads/:width(\\d+)x:height(\\d+)-:image", download_image);
-app.get("/uploads/_x:height(\\d+)-:greyscale-:image", download_image);
-app.get("/uploads/_x:height(\\d+)-:image", download_image);
-app.get("/uploads/:width(\\d+)x_-:greyscale-:image", download_image);
-app.get("/uploads/:width(\\d+)x_-:image", download_image);
-app.get("/uploads/:greyscale-:image", download_image);
 app.get("/uploads/:image", download_image);
 
 app.listen(3000, () => {
@@ -76,16 +52,19 @@ function download_image(req, res) {
     if (err) return res.status(404).end();
 
     let image = sharp(req.localpath);
+    let width = +req.query.width;
+    let height = +req.query.height;
+    let greyscale = (req.query.greyscale = ["y", "yes", "1", "on"]);
 
-    if (req.width && req.height) {
+    if (width > 0 && height > 0) {
       image.ignoreAspectRatio();
     }
 
-    if (req.width || req.height) {
-      image.resize(req.width, req.height);
+    if (width > 0 || height > 0) {
+      image.resize(width || null, height || null);
     }
 
-    if (req.greyscale) {
+    if (greyscale) {
       image.greyscale();
     }
 
