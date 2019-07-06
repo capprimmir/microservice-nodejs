@@ -4,48 +4,58 @@ const bodyparser = require("body-parser");
 const path = require("path");
 const fs = require("fs");
 const app = express();
+const settings = require("./settings");
+const mysql = require("mysql");
+const db = mysql.createConnection(settings.db)
 
-app.param("image", (req, res, next, image) => {
-  if (!image.match(/\.(png|jpg)$/i)) {
-    return res.status(req.method == "POST" ? 403 : 404).end();
-  }
 
-  req.image = image;
-  req.localpath = path.join(__dirname, "uploads", req.image);
+db.connect((err) => {
+  if (err) throw err;
 
-  return next();
-});
+  console.log("db: ready");
 
-app.post("/uploads/:image", bodyparser.raw({
-  limit: "10mb",
-  type: "image/*"
-}), (req, res) => {
-  let fd = fs.createWriteStream(req.localpath, {
-    flags: "w+",
-    encoding: "binary"
+  app.param("image", (req, res, next, image) => {
+    if (!image.match(/\.(png|jpg)$/i)) {
+      return res.status(req.method == "POST" ? 403 : 404).end();
+    }
+
+    req.image = image;
+    req.localpath = path.join(__dirname, "uploads", req.image);
+
+    return next();
   });
 
-  fd.end(req.body);
+  app.post("/uploads/:image", bodyparser.raw({
+    limit: "10mb",
+    type: "image/*"
+  }), (req, res) => {
+    let fd = fs.createWriteStream(req.localpath, {
+      flags: "w+",
+      encoding: "binary"
+    });
 
-  fd.on("close", () => {
-    res.send({
-      status: "ok",
-      size: req.body.length
+    fd.end(req.body);
+
+    fd.on("close", () => {
+      res.send({
+        status: "ok",
+        size: req.body.length
+      });
     });
   });
-});
+  app.head("/uploads/:image", (req, res) => {
+    fs.access(req.localpath, fs.constants.R_OK, (err) => {
+      res.status(err ? 404 : 200).end();
+    });
+  });
 
-app.head("/uploads/:image", (req, res) => {
-  fs.access(req.localpath, fs.constants.R_OK, (err) => {
-    res.status(err ? 404 : 200).end();
+  app.get("/uploads/:image", download_image);
+
+  app.listen(3000, () => {
+    console.log("app: ready");
   });
 });
 
-app.get("/uploads/:image", download_image);
-
-app.listen(3000, () => {
-  console.log("ready");
-});
 
 function download_image(req, res) {
   fs.access(req.localpath, fs.constants.R_OK, (err) => {
