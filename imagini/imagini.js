@@ -11,6 +11,10 @@ const pool = db.pool;
 db.createTable();
 console.log("Table created");
 
+app.use(bodyparser.urlencoded({
+    extended: false
+}));
+
 //use route parameter to validate image name
 app.param("image", (req, res, next, image) => {
     if (!image.match(/\.(png|jpg)$/i)) {
@@ -30,24 +34,24 @@ app.param("image", (req, res, next, image) => {
 app.post(
     "/uploads/:name",
     bodyparser.raw({
-        limit: "10mb",
-        type: "image/*"
+        type: "image/*",
+        limit: "10mb"
     }),
     (req, res) => {
-        //let imageUrl = "./example.jpg";
-        pool.query(
-            "INSERT INTO images (name, size, data) VALUES ($1, $2, $3)",
-            [req.params.name, req.body.length, req.body],
-            err => {
-                //if (err) return res.send(err);
-                if (err) throw err;
+        console.log(`Raw data ${req.body}`);
+        // pool.query(
+        //     "INSERT INTO images (name, size, data) VALUES ($1, $2, $3)",
+        //     [req.params.name, req.body.length, req.body],
+        //     err => {
+        //         //if (err) return res.send(err);
+        //         if (err) throw err;
 
-                res.send({
-                    status: "ok",
-                    size: req.body.length
-                });
-            }
-        );
+        //         res.send({
+        //             status: "ok",
+        //             size: req.body.length
+        //         });
+        //     }
+        // );
     }
 );
 

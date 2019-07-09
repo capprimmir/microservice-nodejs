@@ -18,7 +18,8 @@ const createTable = () => {
     data BYTEA NOT NULL,
     UNIQUE (name))
     `, (err, res) => {
-      console.log(err, res);
+      if (err) throw err;
+      console.log(res);
     });
 }
 
