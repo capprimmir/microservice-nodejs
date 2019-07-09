@@ -3,10 +3,24 @@ const path = require("path");
 const fs = require("fs");
 const express = require("express");
 const sharp = require("sharp");
+const multer = require('multer');
 
 const app = express();
 const db = require("./queries");
 const pool = db.pool;
+
+//set storage for images using multer
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, file.originalname);
+    }
+});
+const upload = multer({
+    storage: storage
+});
 
 db.createTable();
 console.log("Table created");
@@ -31,29 +45,25 @@ app.param("image", (req, res, next, image) => {
 });
 
 //function that wil handle uploadin an image
-app.post(
-    "/uploads/:name",
-    bodyparser.raw({
-        type: "image/*",
-        limit: "10mb"
-    }),
-    (req, res) => {
-        console.log(`Raw data ${req.body}`);
-        // pool.query(
-        //     "INSERT INTO images (name, size, data) VALUES ($1, $2, $3)",
-        //     [req.params.name, req.body.length, req.body],
-        //     err => {
-        //         //if (err) return res.send(err);
-        //         if (err) throw err;
+app.post('/uploadimage', upload.single('image'), (req, res, next) => {
+    console.log(req.file);
+    console.log('nombre', req.file.fieldname);
+    pool.query(
+        "INSERT INTO images (name, size, data) VALUES ($1, $2, $3)",
+        [req.body.name, req.file.size, req.file.path],
+        err => {
+            //if (err) return res.send(err);
+            if (err) throw err;
 
-        //         res.send({
-        //             status: "ok",
-        //             size: req.body.length
-        //         });
-        //     }
-        // );
-    }
-);
+            res.send({
+                status: "ok",
+                size: req.file.size
+            });
+        }
+    );
+
+})
+
 
 app.head("/uploads/:image", (req, res) => {
     return res.status(200).end();
@@ -76,9 +86,6 @@ app.get("/", (req, res) => {
         info: "Node.js, Express, and Postgres API runing from imagini"
     });
 });
-
-//request using postgres
-app.get("/users", db.getUsers);
 
 app.get("/uploads/:image", (req, res) => {
     // fs.access(req.localpath, fs.constants.R_OK, err => {
