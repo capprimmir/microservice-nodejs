@@ -6,6 +6,7 @@ const fs = require("fs");
 const app = express();
 const settings = require("./settings");
 const mysql = require("mysql");
+
 const db = mysql.createConnection(settings.db)
 
 
@@ -14,39 +15,64 @@ db.connect((err) => {
 
   console.log("db: ready");
 
+  db.query(
+    `CREATE TABLE IF NOT EXISTS images
+    (
+        id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+        date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        date_used TIMESTAMP NULL DEFAULT NULL,
+        name VARCHAR(300) NOT NULL,
+        size INT(11) UNSIGNED NOT NULL,
+        data LONGBLOB NOT NULL,
+
+        PRIMARY KEY (id),
+        UNIQUE KEY name (name)
+    )
+    ENGINE=InnoDB DEFAULT CHARSET=utf8`
+  );
+
   app.param("image", (req, res, next, image) => {
     if (!image.match(/\.(png|jpg)$/i)) {
-      return res.status(req.method == "POST" ? 403 : 404).end();
+      return res.status(403).end();
     }
 
-    req.image = image;
-    req.localpath = path.join(__dirname, "uploads", req.image);
+    db.query("SELECT * FROM images WHERE name = ?", [image], (err, images) => {
+      if (err || !images.length) {
+        return res.status(404).end();
+      }
 
-    return next();
+      req.image = images[0];
+
+      return next();
+    });
   });
 
-  app.post("/uploads/:image", bodyparser.raw({
-    limit: "10mb",
+  app.post("/uploads/:name", bodyparser.raw({
+    limit: "100kb",
     type: "image/*"
   }), (req, res) => {
-    let fd = fs.createWriteStream(req.localpath, {
-      flags: "w+",
-      encoding: "binary"
-    });
+    console.log(req.params.name);
+    db.query("INSERT INTO images SET ?", {
+      name: req.params.name,
+      size: req.body.length,
+      data: req.body,
+    }, (err) => {
+      if (err) {
+        return res.send({
+          status: "error",
+          code: err.code
+        });
+      }
 
-    fd.end(req.body);
-
-    fd.on("close", () => {
       res.send({
         status: "ok",
         size: req.body.length
       });
     });
   });
+
   app.head("/uploads/:image", (req, res) => {
-    fs.access(req.localpath, fs.constants.R_OK, (err) => {
-      res.status(err ? 404 : 200).end();
-    });
+    return res.status(200).end();
   });
 
   app.get("/uploads/:image", download_image);
