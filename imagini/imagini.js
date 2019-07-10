@@ -20,6 +20,8 @@ const upload = multer({
     storage: storage
 });
 
+app.db = db;
+
 db.createTable();
 console.log("Table created");
 
@@ -41,7 +43,7 @@ app.post('/uploads', upload.single('image'), (req, res) => {
     console.log('nombre', req.file.fieldname);
     pool.query(
         "INSERT INTO images (name, size, path, data) VALUES ($1, $2, $3, $4)",
-        [req.body.name, req.file.size, req.file.path, req.file.path],
+        [req.body.name, req.file.size, req.file.path, req.body],
         err => {
             if (err) throw err;
 
@@ -101,3 +103,5 @@ app.get("/uploads/:image", (req, res) => {
 app.listen(3000, () => {
     console.log("ready");
 });
+
+module.exports = app;

@@ -7,16 +7,16 @@ const app = express();
 const settings = require("./settings");
 const mysql = require("mysql");
 
-const db = mysql.createConnection(settings.db)
+const db = mysql.createConnection(settings.db);
 
-
-db.connect((err) => {
+db.connect(err => {
   if (err) throw err;
 
   console.log("db: ready");
 
-  db.query(
-    `CREATE TABLE IF NOT EXISTS images
+  const createTable = () =>
+    db.query(
+      `CREATE TABLE IF NOT EXISTS images
     (
         id INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
         date_created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -29,7 +29,8 @@ db.connect((err) => {
         UNIQUE KEY name (name)
     )
     ENGINE=InnoDB DEFAULT CHARSET=utf8`
-  );
+    );
+  createTable();
 
   app.param("image", (req, res, next, image) => {
     if (!image.match(/\.(png|jpg)$/i)) {
@@ -47,47 +48,45 @@ db.connect((err) => {
     });
   });
 
-  app.post("/uploads/:name", bodyparser.raw({
-    limit: "100kb",
-    type: "image/*"
-  }), (req, res) => {
-    console.log(req.params.name);
-    db.query("INSERT INTO images SET ?", {
-      name: req.params.name,
-      size: req.body.length,
-      data: req.body,
-    }, (err) => {
-      if (err) {
-        return res.send({
-          status: "error",
-          code: err.code
-        });
-      }
+  app.post(
+    "/uploads/:name",
+    bodyparser.raw({
+      limit: "10mb",
+      type: "image/*"
+    }),
+    (req, res) => {
+      console.log("data", req.body);
+      console.log(req.params.name);
+      db.query(
+        "INSERT INTO images SET ?",
+        {
+          name: req.params.name,
+          size: req.body.length,
+          data: req.body
+        },
+        err => {
+          if (err) {
+            return res.send({
+              status: "error",
+              code: err.code
+            });
+          }
 
-      res.send({
-        status: "ok",
-        size: req.body.length
-      });
-    });
-  });
+          res.send({
+            status: "ok",
+            size: req.body.length
+          });
+        }
+      );
+    }
+  );
 
   app.head("/uploads/:image", (req, res) => {
     return res.status(200).end();
   });
 
-  app.get("/uploads/:image", download_image);
-
-  app.listen(3000, () => {
-    console.log("app: ready");
-  });
-});
-
-
-function download_image(req, res) {
-  fs.access(req.localpath, fs.constants.R_OK, (err) => {
-    if (err) return res.status(404).end();
-
-    let image = sharp(req.localpath);
+  app.get("/uploads/:image", (req, res) => {
+    let image = sharp(req.image.data);
     let width = +req.query.width;
     let height = +req.query.height;
     let blur = +req.query.blur;
@@ -110,9 +109,20 @@ function download_image(req, res) {
     if (sharpen > 0) image.sharpen(sharpen);
     if (greyscale) image.greyscale();
 
-    res.setHeader("Content-Type", "image/" +
-      path.extname(req.image).substr(1));
+    db.query(
+      "UPDATE images " + "SET date_used = UTC_TIMESTAMP " + "WHERE id = ?",
+      [req.image.id]
+    );
+
+    res.setHeader(
+      "Content-Type",
+      "image/" + path.extname(req.image.name).substr(1)
+    );
 
     image.pipe(res);
   });
-}
+
+  app.listen(3000, () => {
+    console.log("app: ready");
+  });
+});
