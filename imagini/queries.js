@@ -15,6 +15,7 @@ const createTable = () => {
     date_used TIMESTAMP NULL DEFAULT NULL,
     name VARCHAR(300) NOT NULL,
     size INT NOT NULL,
+    path VARCHAR(50) NOT NULL,
     data BYTEA NOT NULL,
     UNIQUE (name))
     `, (err, res) => {
