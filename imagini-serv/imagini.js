@@ -122,6 +122,12 @@ db.connect(err => {
     image.pipe(res);
   });
 
+  app.delete("/uploads/:image", (req, res) => {
+    db.query("DELETE FROM images WHERE id = ?", [req.image.id], err => {
+      return res.status(err ? 500 : 200).end();
+    });
+  });
+
   app.listen(3000, () => {
     console.log("app: ready");
   });
