@@ -122,6 +122,20 @@ db.connect(err => {
     image.pipe(res);
   });
 
+  app.get("/stats", (req, res) => {
+    db.query(
+      "SELECT COUNT(*) total, SUM(size) size, MAX(date_created) last_created FROM images",
+      (err, rows) => {
+        if (err) {
+          return res.status(500).end();
+        }
+
+        rows[0].uptime = process.uptime();
+        return res.send(rows[0]);
+      }
+    );
+  });
+
   app.delete("/uploads/:image", (req, res) => {
     db.query("DELETE FROM images WHERE id = ?", [req.image.id], err => {
       return res.status(err ? 500 : 200).end();
