@@ -4,7 +4,7 @@
   "description": "",
   "main": "imagini.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node test/run"
   },
   "keywords": [],
   "author": "",
@@ -14,5 +14,10 @@
     "express": "^4.17.1",
     "mysql": "^2.17.1",
     "sharp": "^0.22.1"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "chai-http": "^4.3.0",
+    "mocha": "^6.1.4"
   }
 }

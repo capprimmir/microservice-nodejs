@@ -58,8 +58,7 @@ db.connect(err => {
       console.log("data", req.body);
       console.log(req.params.name);
       db.query(
-        "INSERT INTO images SET ?",
-        {
+        "INSERT INTO images SET ?", {
           name: req.params.name,
           size: req.body.length,
           data: req.body
@@ -146,3 +145,5 @@ db.connect(err => {
     console.log("app: ready");
   });
 });
+
+module.exports = app;
