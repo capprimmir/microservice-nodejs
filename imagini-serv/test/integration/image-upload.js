@@ -24,4 +24,25 @@ describe('Uploading image', () => {
         return done();
       });
   });
+
+  it('should deny duplicated images', (done) => {
+    chai.request(tools.service)
+      .post('/uploads/test_image_upload.jpg')
+      .set('Content-Type', 'image/jpg')
+      .send(tools.sample)
+      .end((err, res) => {
+        chai.expect(res).to.have.status(200);
+        chai.expect(res.body).to.have.status('ok');
+
+        chai.request(tools.service)
+          .post('/uploads/test_image_upload.jpg')
+          .set('Content-Type', 'image/jpg')
+          .send(tools.sample)
+          .end((err, res) => {
+            chai.expect(res).to.have.status(200);
+            chai.expect(res.body).to.have.property('code', 'ER_DUP_ENTRY');
+            return done();
+          })
+      });
+  });
 });
