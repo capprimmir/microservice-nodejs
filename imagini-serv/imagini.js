@@ -8,6 +8,7 @@ const settings = require("./settings");
 const mysql = require("mysql");
 
 const db = mysql.createConnection(settings.db);
+app.db = db;
 
 db.connect(err => {
   if (err) throw err;
